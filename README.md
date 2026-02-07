@@ -1,0 +1,1 @@
+Project for detecting discrepancies in financial documents
