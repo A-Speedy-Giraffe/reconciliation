@@ -143,7 +143,7 @@ function ResultsTable({ results, onAnalyzeCauses, analyzingCauses, rootCauseAnal
 }
 
 function App() {
-  const [activeTab, setActiveTab] = useState('normal') // 'normal' or 'database'
+  const [activeTab, setActiveTab] = useState('home') // 'home', 'normal', or 'database'
   const [files, setFiles] = useState([null, null])
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -398,6 +398,83 @@ function App() {
     }
   }
 
+  const renderHomePage = () => (
+    <div className="home-page">
+      <div className="hero-section">
+        <div className="hero-icon">
+          <svg width="80" height="80" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="10" width="14" height="28" rx="2" fill="#10B981" opacity="0.9"/>
+            <rect x="26" y="10" width="14" height="28" rx="2" fill="#3B82F6" opacity="0.9"/>
+            <path d="M11 16 L19 16 M11 20 L19 20 M11 24 L19 24" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M29 16 L37 16 M29 20 L37 20 M29 24 L37 24" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </div>
+        <h2 className="hero-title">Welcome to DocSync</h2>
+        <p className="hero-description">
+          Powerful AI-driven document reconciliation platform that automatically detects discrepancies
+          across your financial documents. Choose your workflow to get started.
+        </p>
+      </div>
+
+      <div className="mode-cards">
+        <div className="mode-card">
+          <div className="mode-icon">📄</div>
+          <h3>Normal Mode</h3>
+          <p>Compare 2-5 documents simultaneously in a single batch analysis</p>
+          <ul className="feature-list">
+            <li>Quick one-time comparisons</li>
+            <li>Multi-document analysis</li>
+            <li>Instant discrepancy detection</li>
+          </ul>
+          <button className="mode-btn normal-btn" onClick={() => setActiveTab('normal')}>
+            Start Normal Mode
+          </button>
+        </div>
+
+        <div className="mode-card featured">
+          <div className="featured-badge">Popular</div>
+          <div className="mode-icon">🗄️</div>
+          <h3>Database Mode</h3>
+          <p>Build a document library and compare new documents against your entire database</p>
+          <ul className="feature-list">
+            <li>Persistent document storage</li>
+            <li>Folder batch uploads</li>
+            <li>Compare vs entire database</li>
+          </ul>
+          <button className="mode-btn database-btn" onClick={() => setActiveTab('database')}>
+            Start Database Mode
+          </button>
+        </div>
+      </div>
+
+      <div className="features-section">
+        <h3>Key Features</h3>
+        <div className="features-grid">
+          <div className="feature-item">
+            <span className="feature-icon">🤖</span>
+            <h4>AI-Powered Analysis</h4>
+            <p>Claude 4.5 extracts and compares numerical data intelligently</p>
+          </div>
+          <div className="feature-item">
+            <span className="feature-icon">📊</span>
+            <h4>Multi-Format Support</h4>
+            <p>Works with PDF, Excel, CSV, and JSON documents</p>
+          </div>
+          <div className="feature-item">
+            <span className="feature-icon">⚡</span>
+            <h4>Root Cause Analysis</h4>
+            <p>Get AI-powered insights into why discrepancies exist</p>
+          </div>
+          <div className="feature-item">
+            <span className="feature-icon">🎯</span>
+            <h4>Smart Matching</h4>
+            <p>Intelligently matches fields across different document formats</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
   const renderNormalMode = () => (
     <>
       <section className="upload-grid">
@@ -562,27 +639,39 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Reconciliation</h1>
-        <p className="subtitle">Upload financial documents to detect discrepancies (up to {MAX_DOCUMENTS})</p>
+        <div className="logo-container">
+          <svg className="logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="10" width="14" height="28" rx="2" fill="#10B981" opacity="0.9"/>
+            <rect x="26" y="10" width="14" height="28" rx="2" fill="#3B82F6" opacity="0.9"/>
+            <path d="M11 16 L19 16 M11 20 L19 20 M11 24 L19 24" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
+            <path d="M29 16 L37 16 M29 20 L37 20 M29 24 L37 24" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <h1>DocSync</h1>
+        </div>
+        <p className="subtitle">Professional Document Reconciliation & Analysis Platform</p>
       </header>
 
-      <div className="tabs">
-        <button
-          className={`tab ${activeTab === 'normal' ? 'active' : ''}`}
-          onClick={() => handleTabChange('normal')}
-        >
-          Normal Mode
-        </button>
-        <button
-          className={`tab ${activeTab === 'database' ? 'active' : ''}`}
-          onClick={() => handleTabChange('database')}
-        >
-          Database Mode
-        </button>
-      </div>
+      {activeTab !== 'home' && (
+        <div className="tabs">
+          <button
+            className={`tab ${activeTab === 'normal' ? 'active' : ''}`}
+            onClick={() => handleTabChange('normal')}
+          >
+            Normal Mode
+          </button>
+          <button
+            className={`tab ${activeTab === 'database' ? 'active' : ''}`}
+            onClick={() => handleTabChange('database')}
+          >
+            Database Mode
+          </button>
+        </div>
+      )}
 
       <main className="app-main">
-        {activeTab === 'normal' ? renderNormalMode() : renderDatabaseMode()}
+        {activeTab === 'home' && renderHomePage()}
+        {activeTab === 'normal' && renderNormalMode()}
+        {activeTab === 'database' && renderDatabaseMode()}
       </main>
     </div>
   )
