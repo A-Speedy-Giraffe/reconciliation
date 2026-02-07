@@ -280,8 +280,33 @@
   background-color: #fef2f2;
 }
 
-.results-table tr.severity-high td {
+.results-table tr.severity-medium {
+  background-color: #fffbeb;
+}
+
+.severity-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.badge-high {
+  background-color: #fee2e2;
   color: #991b1b;
+}
+
+.badge-medium {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-low {
+  background-color: #e5e7eb;
+  color: #4b5563;
 }
 
 .diff-cell {

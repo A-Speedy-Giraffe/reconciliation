@@ -93,6 +93,7 @@ function ResultsTable({ results, documents }) {
         <table className="results-table">
           <thead>
             <tr>
+              <th>Severity</th>
               <th>Row</th>
               <th>Field</th>
               <th>Documents</th>
@@ -102,7 +103,8 @@ function ResultsTable({ results, documents }) {
           </thead>
           <tbody>
             {results.map((r, i) => (
-              <tr key={i} className={r.severity === 'high' ? 'severity-high' : ''}>
+              <tr key={i} className={`severity-${r.severity || 'low'}`}>
+                <td><span className={`severity-badge badge-${r.severity || 'low'}`}>{r.severity || 'low'}</span></td>
                 <td>{r.row}</td>
                 <td>{r.field}</td>
                 <td>{r.documents}</td>
@@ -143,12 +145,15 @@ function App() {
 
   const uploadedCount = files.filter(Boolean).length
 
-  const readFileAsText = (file) => {
+  const readFileAsBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1]
+        resolve(base64)
+      }
       reader.onerror = reject
-      reader.readAsText(file)
+      reader.readAsDataURL(file)
     })
   }
 
@@ -161,19 +166,20 @@ function App() {
       const documents = await Promise.all(
         uploadedFiles.map(async (file) => ({
           name: file.name,
-          content: await readFileAsText(file),
+          data: await readFileAsBase64(file),
         }))
       )
+      console.log('Sending documents:', documents.map(d => `${d.name} (${d.data.length} chars base64)`))
       const res = await fetch('/api/reconcile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documents }),
       })
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.error || `Server error (${res.status})`)
-      }
       const data = await res.json()
+      console.log('Server response:', data)
+      if (!res.ok) {
+        throw new Error(data.error || `Server error (${res.status})`)
+      }
       setResults(data.discrepancies)
     } catch (err) {
       setError(err.message)
