@@ -403,10 +403,10 @@ function App() {
       <div className="hero-section">
         <div className="hero-icon">
           <svg width="80" height="80" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="8" y="10" width="14" height="28" rx="2" fill="#10B981" opacity="0.9"/>
-            <rect x="26" y="10" width="14" height="28" rx="2" fill="#3B82F6" opacity="0.9"/>
-            <path d="M11 16 L19 16 M11 20 L19 20 M11 24 L19 24" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
-            <path d="M29 16 L37 16 M29 20 L37 20 M29 24 L37 24" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
+            <rect x="8" y="8" width="14" height="18" rx="2" fill="#10B981" opacity="0.9"/>
+            <rect x="26" y="8" width="14" height="18" rx="2" fill="#3B82F6" opacity="0.9"/>
+            <path d="M18 28 L30 28 M18 32 L30 32 M18 36 L30 36" stroke="#059669" strokeWidth="2" strokeLinecap="round"/>
+            <circle cx="24" cy="24" r="4" fill="#fff" stroke="#3B82F6" strokeWidth="2"/>
           </svg>
         </div>
         <h2 className="hero-title">Welcome to DocSync</h2>
@@ -448,27 +448,66 @@ function App() {
       </div>
 
       <div className="features-section">
-        <h3>Key Features</h3>
+        <h3>Why teams choose DocSync</h3>
+        <p className="features-subtitle">
+          Enterprise-grade document reconciliation powered by advanced AI technology
+        </p>
         <div className="features-grid">
           <div className="feature-item">
-            <span className="feature-icon">🤖</span>
-            <h4>AI-Powered Analysis</h4>
-            <p>Claude 4.5 extracts and compares numerical data intelligently</p>
+            <div className="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4Z" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M12 8V12L15 15" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="12" cy="12" r="2" fill="white"/>
+              </svg>
+            </div>
+            <div className="feature-content">
+              <h4>AI-Powered Analysis</h4>
+              <p>Claude 4.5 intelligently extracts and compares numerical data across documents with unprecedented accuracy</p>
+            </div>
           </div>
           <div className="feature-item">
-            <span className="feature-icon">📊</span>
-            <h4>Multi-Format Support</h4>
-            <p>Works with PDF, Excel, CSV, and JSON documents</p>
+            <div className="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="4" width="6" height="8" rx="1" stroke="white" strokeWidth="2"/>
+                <rect x="14" y="4" width="6" height="8" rx="1" stroke="white" strokeWidth="2"/>
+                <rect x="4" y="14" width="6" height="6" rx="1" stroke="white" strokeWidth="2"/>
+                <rect x="14" y="14" width="6" height="6" rx="1" stroke="white" strokeWidth="2"/>
+              </svg>
+            </div>
+            <div className="feature-content">
+              <h4>Universal Format Support</h4>
+              <p>Seamlessly process PDF, Excel, CSV, and JSON documents without manual conversion or preprocessing</p>
+            </div>
           </div>
           <div className="feature-item">
-            <span className="feature-icon">⚡</span>
-            <h4>Root Cause Analysis</h4>
-            <p>Get AI-powered insights into why discrepancies exist</p>
+            <div className="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="11" cy="11" r="7" stroke="white" strokeWidth="2"/>
+                <path d="M18 18L21 21" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M11 8V11L13 13" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="feature-content">
+              <h4>Root Cause Analysis</h4>
+              <p>Receive AI-powered insights into discrepancy origins, saving hours of manual investigation time</p>
+            </div>
           </div>
           <div className="feature-item">
-            <span className="feature-icon">🎯</span>
-            <h4>Smart Matching</h4>
-            <p>Intelligently matches fields across different document formats</p>
+            <div className="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 12H17" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M7 8H10" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M14 8H17" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M7 16H10" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M14 16H17" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="12" cy="12" r="2" fill="white"/>
+              </svg>
+            </div>
+            <div className="feature-content">
+              <h4>Smart Field Matching</h4>
+              <p>Advanced algorithms automatically match corresponding fields across different document formats and structures</p>
+            </div>
           </div>
         </div>
       </div>
@@ -641,10 +680,10 @@ function App() {
       <header className="app-header">
         <div className="logo-container">
           <svg className="logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="8" y="10" width="14" height="28" rx="2" fill="#10B981" opacity="0.9"/>
-            <rect x="26" y="10" width="14" height="28" rx="2" fill="#3B82F6" opacity="0.9"/>
-            <path d="M11 16 L19 16 M11 20 L19 20 M11 24 L19 24" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
-            <path d="M29 16 L37 16 M29 20 L37 20 M29 24 L37 24" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round"/>
+            <rect x="8" y="8" width="14" height="18" rx="2" fill="#10B981" opacity="0.9"/>
+            <rect x="26" y="8" width="14" height="18" rx="2" fill="#3B82F6" opacity="0.9"/>
+            <path d="M18 28 L30 28 M18 32 L30 32 M18 36 L30 36" stroke="#059669" strokeWidth="2" strokeLinecap="round"/>
+            <circle cx="24" cy="24" r="4" fill="#fff" stroke="#3B82F6" strokeWidth="2"/>
           </svg>
           <h1>DocSync</h1>
         </div>
