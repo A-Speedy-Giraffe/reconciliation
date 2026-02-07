@@ -1,7 +1,50 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import './App.css'
 
 const MAX_DOCUMENTS = 5
+
+const LOADING_MESSAGES = [
+  'Reading documents',
+  'Extracting data',
+  'Comparing numbers',
+  'Finding patterns',
+  'Double checking',
+  'Almost there',
+  'Finalizing results',
+  'Thinking deeply',
+  'Crunching numbers',
+  'Analyzing discrepancies',
+]
+
+function LoadingAnimation({ message = 'Processing' }) {
+  const [messageIndex, setMessageIndex] = useState(0)
+  const [dots, setDots] = useState('')
+
+  useEffect(() => {
+    const messageInterval = setInterval(() => {
+      setMessageIndex(prev => (prev + 1) % LOADING_MESSAGES.length)
+    }, 2000)
+
+    const dotsInterval = setInterval(() => {
+      setDots(prev => (prev.length >= 3 ? '' : prev + '.'))
+    }, 400)
+
+    return () => {
+      clearInterval(messageInterval)
+      clearInterval(dotsInterval)
+    }
+  }, [])
+
+  return (
+    <div className="loading-animation">
+      <div className="loading-spinner"></div>
+      <span className="loading-text">
+        {LOADING_MESSAGES[messageIndex]}
+        <span className="loading-dots">{dots}</span>
+      </span>
+    </div>
+  )
+}
 
 function FileUploadZone({ label, file, onFileSelect, onRemoveSlot, canRemoveSlot }) {
   const [dragOver, setDragOver] = useState(false)
@@ -79,42 +122,34 @@ function FileUploadZone({ label, file, onFileSelect, onRemoveSlot, canRemoveSlot
   )
 }
 
-function ResultsTable({ results, onAnalyzeCauses, analyzingCauses, rootCauseAnalysis }) {
+function ResultsTable({ results, onAnalyzeCauses, analyzingIndex, rootCauseAnalyses }) {
   if (!results) return null
 
   return (
     <div className="results-section">
       <div className="results-header">
         <h2>Discrepancies Found ({results.length})</h2>
-        {results.length > 0 && (
-          <button
-            className="analyze-btn"
-            onClick={onAnalyzeCauses}
-            disabled={analyzingCauses}
-          >
-            {analyzingCauses ? 'Analyzing...' : '🔍 Analyze Root Causes'}
-          </button>
-        )}
       </div>
       {results.length === 0 ? (
         <div className="no-results">
           <p>No discrepancies detected. Documents match.</p>
         </div>
       ) : (
-        <>
-          <table className="results-table">
-            <thead>
-              <tr>
-                <th>Severity</th>
-                <th>Row</th>
-                <th>Field</th>
-                <th>Documents</th>
-                <th>Values</th>
-                <th>Difference</th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.map((r, i) => (
+        <table className="results-table">
+          <thead>
+            <tr>
+              <th>Severity</th>
+              <th>Row</th>
+              <th>Field</th>
+              <th>Documents</th>
+              <th>Values</th>
+              <th>Difference</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {results.map((r, i) => (
+              <>
                 <tr key={i} className={`severity-${r.severity || 'low'}`}>
                   <td><span className={`severity-badge badge-${r.severity || 'low'}`}>{r.severity || 'low'}</span></td>
                   <td>{r.row}</td>
@@ -122,21 +157,34 @@ function ResultsTable({ results, onAnalyzeCauses, analyzingCauses, rootCauseAnal
                   <td>{r.documents}</td>
                   <td>{r.values}</td>
                   <td className="diff-cell">{r.difference}</td>
+                  <td>
+                    <button
+                      className="analyze-row-btn"
+                      onClick={() => onAnalyzeCauses(i)}
+                      disabled={analyzingIndex === i}
+                    >
+                      {analyzingIndex === i ? <LoadingAnimation /> : rootCauseAnalyses[i] ? '🔄 Re-analyze' : '🔍 Analyze'}
+                    </button>
+                  </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {rootCauseAnalysis && (
-            <div className="root-cause-analysis">
-              <h3>Root Cause Analysis</h3>
-              <div className="analysis-content">
-                {rootCauseAnalysis.split('\n').map((line, i) => (
-                  <p key={i}>{line}</p>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+                {rootCauseAnalyses[i] && (
+                  <tr key={`analysis-${i}`} className="analysis-row">
+                    <td colSpan="7">
+                      <div className="row-analysis">
+                        <h4>Root Cause Analysis</h4>
+                        <div className="analysis-content">
+                          {rootCauseAnalyses[i].split('\n').map((line, j) => (
+                            <p key={j}>{line}</p>
+                          ))}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   )
@@ -158,8 +206,8 @@ function App() {
 
   // Root cause analysis state
   const [tables, setTables] = useState(null)
-  const [analyzingCauses, setAnalyzingCauses] = useState(false)
-  const [rootCauseAnalysis, setRootCauseAnalysis] = useState(null)
+  const [analyzingIndex, setAnalyzingIndex] = useState(null)
+  const [rootCauseAnalyses, setRootCauseAnalyses] = useState({})
 
   const setFileAt = (index, file) => {
     setFiles(prev => {
@@ -197,7 +245,7 @@ function App() {
     if (uploadedCount < 2) return
     setLoading(true)
     setError(null)
-    setRootCauseAnalysis(null)
+    setRootCauseAnalyses({})
     try {
       const uploadedFiles = files.filter(Boolean)
       const documents = await Promise.all(
@@ -284,7 +332,7 @@ function App() {
     if (!compareDoc) return
     setLoading(true)
     setError(null)
-    setRootCauseAnalysis(null)
+    setRootCauseAnalyses({})
     try {
       const base64 = await readFileAsBase64(compareDoc)
       const res = await fetch('/api/database/compare', {
@@ -373,16 +421,16 @@ function App() {
     event.target.value = ''
   }
 
-  const handleAnalyzeCauses = async () => {
-    if (!results || !tables) return
-    setAnalyzingCauses(true)
+  const handleAnalyzeCauses = async (index) => {
+    if (!results || !tables || index === undefined) return
+    setAnalyzingIndex(index)
     setError(null)
     try {
       const res = await fetch('/api/analyze-causes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          discrepancies: results,
+          discrepancies: [results[index]], // Send only the specific discrepancy
           tables: tables,
         }),
       })
@@ -390,13 +438,252 @@ function App() {
       if (!res.ok) {
         throw new Error(data.error || `Server error (${res.status})`)
       }
-      setRootCauseAnalysis(data.analysis)
+      setRootCauseAnalyses(prev => ({
+        ...prev,
+        [index]: data.analysis
+      }))
     } catch (err) {
       setError(err.message)
     } finally {
-      setAnalyzingCauses(false)
+      setAnalyzingIndex(null)
     }
   }
+
+  const renderPaymentsPage = () => (
+    <div className="payments-page">
+      <div className="payments-hero">
+        <h2 className="payments-title">Simple, Transparent Pricing</h2>
+        <p className="payments-subtitle">
+          Choose the plan that fits your reconciliation needs
+        </p>
+      </div>
+
+      <div className="pricing-cards">
+        <div className="pricing-card">
+          <div className="pricing-header">
+            <h3>Starter</h3>
+            <div className="price">
+              <span className="price-currency">$</span>
+              <span className="price-amount">49</span>
+              <span className="price-period">/month</span>
+            </div>
+          </div>
+          <ul className="pricing-features">
+            <li>Up to 100 documents/month</li>
+            <li>QuickCompare mode</li>
+            <li>Basic discrepancy detection</li>
+            <li>Email support</li>
+            <li>7-day data retention</li>
+          </ul>
+          <button className="pricing-btn starter-btn">Get Started</button>
+        </div>
+
+        <div className="pricing-card featured-pricing">
+          <div className="featured-pricing-badge">Most Popular</div>
+          <div className="pricing-header">
+            <h3>Professional</h3>
+            <div className="price">
+              <span className="price-currency">$</span>
+              <span className="price-amount">149</span>
+              <span className="price-period">/month</span>
+            </div>
+          </div>
+          <ul className="pricing-features">
+            <li>Up to 500 documents/month</li>
+            <li>QuickCompare + Library Mode</li>
+            <li>AI root cause analysis</li>
+            <li>Priority email support</li>
+            <li>30-day data retention</li>
+            <li>Folder batch uploads</li>
+          </ul>
+          <button className="pricing-btn professional-btn">Get Started</button>
+        </div>
+
+        <div className="pricing-card">
+          <div className="pricing-header">
+            <h3>Enterprise</h3>
+            <div className="price">
+              <span className="price-currency">$</span>
+              <span className="price-amount">499</span>
+              <span className="price-period">/month</span>
+            </div>
+          </div>
+          <ul className="pricing-features">
+            <li>Unlimited documents</li>
+            <li>All features included</li>
+            <li>Advanced AI analysis</li>
+            <li>24/7 phone & email support</li>
+            <li>Unlimited data retention</li>
+            <li>Custom integrations</li>
+            <li>Dedicated account manager</li>
+          </ul>
+          <button className="pricing-btn enterprise-btn">Contact Sales</button>
+        </div>
+      </div>
+
+      <div className="payments-faq">
+        <h3>Frequently Asked Questions</h3>
+        <div className="faq-grid">
+          <div className="faq-item">
+            <h4>What payment methods do you accept?</h4>
+            <p>We accept all major credit cards (Visa, MasterCard, Amex) and bank transfers for annual plans.</p>
+          </div>
+          <div className="faq-item">
+            <h4>Can I change plans anytime?</h4>
+            <p>Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.</p>
+          </div>
+          <div className="faq-item">
+            <h4>Is there a free trial?</h4>
+            <p>We offer a 14-day free trial on all plans. No credit card required to start.</p>
+          </div>
+          <div className="faq-item">
+            <h4>What happens if I exceed my document limit?</h4>
+            <p>We'll notify you when you're approaching your limit. You can upgrade anytime or purchase additional documents.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderContactUsPage = () => (
+    <div className="contact-page">
+      <div className="contact-hero">
+        <h2 className="contact-title">Get in Touch</h2>
+        <p className="contact-subtitle">
+          Have questions? We'd love to hear from you.
+        </p>
+      </div>
+
+      <div className="contact-layout">
+        <div className="contact-info">
+          <div className="contact-info-card">
+            <div className="contact-icon">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 8L10.89 13.26C11.2187 13.4793 11.6049 13.5963 12 13.5963C12.3951 13.5963 12.7813 13.4793 13.11 13.26L21 8M5 19H19C19.5304 19 20.0391 18.7893 20.4142 18.4142C20.7893 18.0391 21 17.5304 21 17V7C21 6.46957 20.7893 5.96086 20.4142 5.58579C20.0391 5.21071 19.5304 5 19 5H5C4.46957 5 3.96086 5.21071 3.58579 5.58579C3.21071 5.96086 3 6.46957 3 7V17C3 17.5304 3.21071 18.0391 3.58579 18.4142C3.96086 18.7893 4.46957 19 5 19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <h4>Email Us</h4>
+            <p>support@docsync.com</p>
+            <p className="contact-info-detail">We typically respond within 24 hours</p>
+          </div>
+
+          <div className="contact-info-card">
+            <div className="contact-icon">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 5C3 3.89543 3.89543 3 5 3H8.27924C8.70967 3 9.09181 3.27543 9.22792 3.68377L10.7257 8.17721C10.8831 8.64932 10.6694 9.16531 10.2243 9.38787L7.96701 10.5165C9.06925 12.9612 11.0388 14.9308 13.4835 16.033L14.6121 13.7757C14.8347 13.3306 15.3507 13.1169 15.8228 13.2743L20.3162 14.7721C20.7246 14.9082 21 15.2903 21 15.7208V19C21 20.1046 20.1046 21 19 21H18C9.71573 21 3 14.2843 3 6V5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <h4>Call Us</h4>
+            <p>+1 (555) 123-4567</p>
+            <p className="contact-info-detail">Mon-Fri, 9am-6pm EST</p>
+          </div>
+
+          <div className="contact-info-card">
+            <div className="contact-icon">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M17.657 16.657L13.414 20.9C13.039 21.2746 12.5306 21.4851 12 21.4851C11.4694 21.4851 10.961 21.2746 10.586 20.9L6.343 16.657C5.22422 15.5381 4.46234 14.1127 4.15369 12.5608C3.84504 11.009 4.00349 9.40047 4.60901 7.93853C5.21452 6.4766 6.2399 5.22726 7.55548 4.34824C8.87107 3.46921 10.4178 3 12 3C13.5822 3 15.1289 3.46921 16.4445 4.34824C17.7601 5.22726 18.7855 6.4766 19.391 7.93853C19.9965 9.40047 20.155 11.009 19.8463 12.5608C19.5377 14.1127 18.7758 15.5381 17.657 16.657Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M12 13C13.1046 13 14 12.1046 14 11C14 9.89543 13.1046 9 12 9C10.8954 9 10 9.89543 10 11C10 12.1046 10.8954 13 12 13Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <h4>Visit Us</h4>
+            <p>123 Finance Street</p>
+            <p className="contact-info-detail">San Francisco, CA 94105</p>
+          </div>
+        </div>
+
+        <div className="contact-form-container">
+          <form className="contact-form">
+            <div className="form-group">
+              <label htmlFor="name">Name</label>
+              <input type="text" id="name" name="name" required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input type="email" id="email" name="email" required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="subject">Subject</label>
+              <input type="text" id="subject" name="subject" required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="message">Message</label>
+              <textarea id="message" name="message" rows="6" required></textarea>
+            </div>
+            <button type="submit" className="contact-submit-btn">Send Message</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderAboutPage = () => (
+    <div className="about-page">
+      <div className="about-hero">
+        <h2 className="about-title">About DocSync</h2>
+        <p className="about-subtitle">
+          AI-powered document reconciliation for modern finance teams
+        </p>
+      </div>
+
+      <div className="about-content">
+        <section className="about-section">
+          <h3>Our Mission</h3>
+          <p>
+            DocSync was built to eliminate the tedious, error-prone process of manually comparing financial documents.
+            We leverage advanced AI technology to automate reconciliation, saving finance teams countless hours while
+            improving accuracy and reducing risk.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h3>How It Works</h3>
+          <p>
+            Our two-step AI pipeline uses Claude 4.5 to first extract numerical data from your documents, then
+            intelligently compares them to identify discrepancies. The system understands different file formats,
+            document structures, and can even provide root cause analysis for the differences it finds.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h3>Technology</h3>
+          <p>
+            Built with React and powered by Anthropic's Claude 4.5, DocSync processes PDF, Excel, CSV, and JSON
+            files with high accuracy. Our system handles complex reconciliation scenarios including timing differences,
+            format inconsistencies, and multi-document comparisons.
+          </p>
+        </section>
+
+        <section className="about-section">
+          <h3>Use Cases</h3>
+          <ul className="about-list">
+            <li>Bank statement reconciliation</li>
+            <li>Invoice verification</li>
+            <li>Payment confirmation matching</li>
+            <li>Financial report validation</li>
+            <li>Audit preparation and support</li>
+            <li>Multi-system data consistency checks</li>
+          </ul>
+        </section>
+
+        <section className="about-section">
+          <h3>Get Started</h3>
+          <p>
+            Ready to streamline your reconciliation process? Choose between QuickCompare for instant document comparisons
+            or Library Mode to build a persistent document library. Both modes feature our AI-powered root
+            cause analysis to help you understand and resolve discrepancies faster.
+          </p>
+          <div className="about-cta">
+            <button className="mode-btn normal-btn" onClick={() => setActiveTab('normal')}>
+              Try QuickCompare
+            </button>
+            <button className="mode-btn database-btn" onClick={() => setActiveTab('database')}>
+              Try Library Mode
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+  )
 
   const renderHomePage = () => (
     <div className="home-page">
@@ -418,8 +705,22 @@ function App() {
 
       <div className="mode-cards">
         <div className="mode-card">
-          <div className="mode-icon">📄</div>
-          <h3>Normal Mode</h3>
+          <div className="mode-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#3B82F6"/>
+                  <stop offset="100%" stopColor="#10B981"/>
+                </linearGradient>
+              </defs>
+              <rect x="3" y="4" width="8" height="11" rx="1.5" strokeWidth="2"/>
+              <rect x="13" y="4" width="8" height="11" rx="1.5" strokeWidth="2"/>
+              <path d="M6 7H8M6 9H8M6 11H8" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M16 7H18M16 9H18M16 11H18" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M3 18L10 18L12 21L14 18L21 18" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <h3>QuickCompare</h3>
           <p>Compare 2-5 documents simultaneously in a single batch analysis</p>
           <ul className="feature-list">
             <li>Quick one-time comparisons</li>
@@ -427,22 +728,38 @@ function App() {
             <li>Instant discrepancy detection</li>
           </ul>
           <button className="mode-btn normal-btn" onClick={() => setActiveTab('normal')}>
-            Start Normal Mode
+            Start QuickCompare
           </button>
         </div>
 
         <div className="mode-card featured">
           <div className="featured-badge">Popular</div>
-          <div className="mode-icon">🗄️</div>
-          <h3>Database Mode</h3>
-          <p>Build a document library and compare new documents against your entire database</p>
+          <div className="mode-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="iconGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#3B82F6"/>
+                  <stop offset="100%" stopColor="#10B981"/>
+                </linearGradient>
+              </defs>
+              <rect x="4" y="3" width="16" height="4" rx="1" stroke="url(#iconGradient2)" strokeWidth="2"/>
+              <rect x="4" y="9" width="16" height="4" rx="1" stroke="url(#iconGradient2)" strokeWidth="2"/>
+              <rect x="4" y="15" width="16" height="4" rx="1" stroke="url(#iconGradient2)" strokeWidth="2"/>
+              <circle cx="7" cy="5" r="0.5" fill="url(#iconGradient2)"/>
+              <circle cx="7" cy="11" r="0.5" fill="url(#iconGradient2)"/>
+              <circle cx="7" cy="17" r="0.5" fill="url(#iconGradient2)"/>
+              <path d="M10 5H17M10 11H17M10 17H17" stroke="url(#iconGradient2)" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <h3>Library Mode</h3>
+          <p>Build a document library and compare new documents against your entire collection</p>
           <ul className="feature-list">
             <li>Persistent document storage</li>
             <li>Folder batch uploads</li>
-            <li>Compare vs entire database</li>
+            <li>Compare vs entire library</li>
           </ul>
           <button className="mode-btn database-btn" onClick={() => setActiveTab('database')}>
-            Start Database Mode
+            Start Library Mode
           </button>
         </div>
       </div>
@@ -542,7 +859,7 @@ function App() {
           disabled={!canReconcile}
           onClick={handleReconcile}
         >
-          {loading ? 'Analyzing...' : 'Compare Documents'}
+          {loading ? <LoadingAnimation /> : 'Compare Documents'}
         </button>
       </div>
 
@@ -555,8 +872,8 @@ function App() {
       <ResultsTable
         results={results}
         onAnalyzeCauses={handleAnalyzeCauses}
-        analyzingCauses={analyzingCauses}
-        rootCauseAnalysis={rootCauseAnalysis}
+        analyzingIndex={analyzingIndex}
+        rootCauseAnalyses={rootCauseAnalyses}
       />
     </>
   )
@@ -578,7 +895,7 @@ function App() {
             onClick={handleAddToDatabase}
             style={{ marginTop: '1rem' }}
           >
-            {loading ? 'Adding...' : 'Add to Database'}
+            {loading ? <LoadingAnimation /> : 'Add to Database'}
           </button>
 
           <div className="folder-upload-section">
@@ -594,7 +911,12 @@ function App() {
                 hidden
               />
               {uploadingFolder ? (
-                <span>Uploading {folderProgress.current} of {folderProgress.total}...</span>
+                <div className="folder-upload-progress">
+                  <LoadingAnimation />
+                  <span className="folder-upload-count">
+                    {folderProgress.current} of {folderProgress.total} files
+                  </span>
+                </div>
               ) : (
                 <span>📁 Upload Folder</span>
               )}
@@ -648,7 +970,7 @@ function App() {
           onClick={handleCompareWithDatabase}
           style={{ marginTop: '1rem' }}
         >
-          {loading ? 'Comparing...' : 'Compare with Database'}
+          {loading ? <LoadingAnimation /> : 'Compare with Database'}
         </button>
       </section>
 
@@ -661,8 +983,8 @@ function App() {
       <ResultsTable
         results={results}
         onAnalyzeCauses={handleAnalyzeCauses}
-        analyzingCauses={analyzingCauses}
-        rootCauseAnalysis={rootCauseAnalysis}
+        analyzingIndex={analyzingIndex}
+        rootCauseAnalyses={rootCauseAnalyses}
       />
     </>
   )
@@ -678,7 +1000,7 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="logo-container">
+        <div className="logo-container" onClick={() => handleTabChange('home')} style={{ cursor: 'pointer' }}>
           <svg className="logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="8" y="8" width="14" height="18" rx="2" fill="#10B981" opacity="0.9"/>
             <rect x="26" y="8" width="14" height="18" rx="2" fill="#3B82F6" opacity="0.9"/>
@@ -687,30 +1009,54 @@ function App() {
           </svg>
           <h1>DocSync</h1>
         </div>
-        <p className="subtitle">Professional Document Reconciliation & Analysis Platform</p>
-      </header>
 
-      {activeTab !== 'home' && (
         <div className="tabs">
+          <button
+            className={`tab ${activeTab === 'home' ? 'active' : ''}`}
+            onClick={() => handleTabChange('home')}
+          >
+            Home
+          </button>
           <button
             className={`tab ${activeTab === 'normal' ? 'active' : ''}`}
             onClick={() => handleTabChange('normal')}
           >
-            Normal Mode
+            QuickCompare
           </button>
           <button
             className={`tab ${activeTab === 'database' ? 'active' : ''}`}
             onClick={() => handleTabChange('database')}
           >
-            Database Mode
+            Library Mode
+          </button>
+          <button
+            className={`tab ${activeTab === 'about' ? 'active' : ''}`}
+            onClick={() => handleTabChange('about')}
+          >
+            About
+          </button>
+          <button
+            className={`tab ${activeTab === 'payments' ? 'active' : ''}`}
+            onClick={() => handleTabChange('payments')}
+          >
+            Pricing
+          </button>
+          <button
+            className={`tab ${activeTab === 'contact' ? 'active' : ''}`}
+            onClick={() => handleTabChange('contact')}
+          >
+            Contact
           </button>
         </div>
-      )}
+      </header>
 
       <main className="app-main">
         {activeTab === 'home' && renderHomePage()}
         {activeTab === 'normal' && renderNormalMode()}
         {activeTab === 'database' && renderDatabaseMode()}
+        {activeTab === 'about' && renderAboutPage()}
+        {activeTab === 'payments' && renderPaymentsPage()}
+        {activeTab === 'contact' && renderContactUsPage()}
       </main>
     </div>
   )
