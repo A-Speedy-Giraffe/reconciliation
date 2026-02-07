@@ -16,6 +16,10 @@ const client = new Dedalus({
   timeout: 60000,
 })
 
+// In-memory database for storing extracted tables
+let database = []
+let nextId = 1
+
 function extractJSON(text) {
   // Try to extract from code fences anywhere in the text
   const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
@@ -121,8 +125,10 @@ async function findDiscrepancies(tables) {
   console.log(`  [Step 2] Comparing ${tables.length} extracted tables...`)
 
   const tablesText = tables
-    .map((t, i) => `--- Document ${i + 1} ---\n${JSON.stringify(t.rows, null, 2)}`)
+    .map((t) => `--- ${t.name} ---\n${JSON.stringify(t.rows, null, 2)}`)
     .join('\n\n')
+
+  const documentNames = tables.map((t) => t.name).join(', ')
 
   const completion = await client.chat.completions.create({
     model: MODEL,
@@ -130,6 +136,8 @@ async function findDiscrepancies(tables) {
       {
         role: 'system',
         content: `You are given structured numerical data extracted from multiple financial documents. Each document's data is a JSON array of rows with "row", "label", and "value" fields.
+
+The documents you are comparing are: ${documentNames}
 
 Compare the data across ALL documents. Find ONLY cases where:
 - The same line item / label exists in MULTIPLE documents AND has a DIFFERENT value
@@ -139,10 +147,12 @@ Compare the data across ALL documents. Find ONLY cases where:
 For each discrepancy, return a JSON object with:
 - "row": the row number(s) involved
 - "field": the label/field name
-- "documents": which documents differ (e.g., "Doc 1 vs Doc 2")
+- "documents": which documents differ - USE THE ACTUAL DOCUMENT NAMES including file extensions (e.g., "invoice.pdf vs statement.xlsx", NOT "Doc 1 vs Doc 2")
 - "values": the conflicting values separated by " / "
 - "difference": a short description of the numerical difference
 - "severity": "high" for monetary/quantity differences, "medium" for date differences, "low" for reference number differences
+
+IMPORTANT: Always use the actual document filenames in the "documents" field. Never use generic names like "Doc 1" or "Document 1".
 
 Return ONLY a valid JSON array. No markdown, no code fences, no explanation.
 If the data matches perfectly across all documents, return: []`,
@@ -175,6 +185,105 @@ If the data matches perfectly across all documents, return: []`,
   return parsed
 }
 
+// Database Mode: Add a document to the database
+app.post('/api/database/add', async (req, res) => {
+  const { document } = req.body
+
+  if (!document || !document.name || !document.data) {
+    return res.status(400).json({ error: 'Document with name and data is required' })
+  }
+
+  console.log(`\n=== Adding document to database: "${document.name}" ===`)
+
+  try {
+    // Parse the document
+    const content = await parseDocument(document.name, document.data)
+    console.log(`  Parsed: ${content.length} chars`)
+
+    // Extract table (Step 1 only)
+    console.log('  Extracting numerical data...')
+    const rows = await extractTable({ name: document.name, content }, 0)
+
+    // Store in database
+    const entry = {
+      id: nextId++,
+      name: document.name,
+      uploadedAt: new Date().toISOString(),
+      rows,
+    }
+    database.push(entry)
+
+    console.log(`  Added to database with ID ${entry.id} (${rows.length} rows)`)
+    res.json({ success: true, entry })
+  } catch (err) {
+    console.error('Database add error:', err)
+    res.status(500).json({ error: `Failed to add document: ${err.message}` })
+  }
+})
+
+// Database Mode: Get all documents in database
+app.get('/api/database/list', (req, res) => {
+  const list = database.map(({ id, name, uploadedAt, rows }) => ({
+    id,
+    name,
+    uploadedAt,
+    rowCount: rows.length,
+  }))
+  res.json({ documents: list })
+})
+
+// Database Mode: Delete a document from database
+app.delete('/api/database/:id', (req, res) => {
+  const id = parseInt(req.params.id)
+  const index = database.findIndex((doc) => doc.id === id)
+
+  if (index === -1) {
+    return res.status(404).json({ error: 'Document not found' })
+  }
+
+  const deleted = database.splice(index, 1)[0]
+  console.log(`  Deleted document ID ${id}: "${deleted.name}"`)
+  res.json({ success: true, deleted })
+})
+
+// Database Mode: Compare a document against all in database
+app.post('/api/database/compare', async (req, res) => {
+  const { document } = req.body
+
+  if (!document || !document.name || !document.data) {
+    return res.status(400).json({ error: 'Document with name and data is required' })
+  }
+
+  if (database.length === 0) {
+    return res.status(400).json({ error: 'Database is empty. Add documents first.' })
+  }
+
+  console.log(`\n=== Comparing "${document.name}" against ${database.length} database documents ===`)
+
+  try {
+    // Parse and extract the compare document
+    const content = await parseDocument(document.name, document.data)
+    const compareRows = await extractTable({ name: document.name, content }, 0)
+    console.log(`  Compare doc: ${compareRows.length} rows extracted`)
+
+    // Build tables array: compare document + all database documents
+    const tables = [
+      { name: `${document.name} (Compare)`, rows: compareRows },
+      ...database.map((doc) => ({ name: doc.name, rows: doc.rows })),
+    ]
+
+    // Step 2: Find discrepancies
+    console.log('\n--- Finding discrepancies ---')
+    const discrepancies = await findDiscrepancies(tables)
+
+    res.json({ tables, discrepancies })
+  } catch (err) {
+    console.error('Database compare error:', err)
+    res.status(500).json({ error: `Failed to compare document: ${err.message}` })
+  }
+})
+
+// Normal Mode: Reconcile multiple documents
 app.post('/api/reconcile', async (req, res) => {
   const { documents } = req.body
 
@@ -219,6 +328,77 @@ app.post('/api/reconcile', async (req, res) => {
   } catch (err) {
     console.error('Reconciliation error:', err)
     res.status(500).json({ error: `Failed to analyze documents: ${err.message}` })
+  }
+})
+
+// Analyze root causes of discrepancies
+app.post('/api/analyze-causes', async (req, res) => {
+  const { discrepancies, tables } = req.body
+
+  if (!discrepancies || !Array.isArray(discrepancies)) {
+    return res.status(400).json({ error: 'Discrepancies array is required' })
+  }
+
+  if (!tables || !Array.isArray(tables)) {
+    return res.status(400).json({ error: 'Tables array is required' })
+  }
+
+  if (discrepancies.length === 0) {
+    return res.status(400).json({ error: 'No discrepancies to analyze' })
+  }
+
+  console.log(`\n=== Analyzing root causes for ${discrepancies.length} discrepancies ===`)
+
+  try {
+    const discrepanciesText = JSON.stringify(discrepancies, null, 2)
+    const tablesText = tables
+      .map((t) => `--- ${t.name} ---\n${JSON.stringify(t.rows, null, 2)}`)
+      .join('\n\n')
+
+    const completion = await client.chat.completions.create({
+      model: MODEL,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a financial reconciliation expert analyzing discrepancies between financial documents.
+
+Given the discrepancies found and the original data, provide a CONCISE analysis with EXACTLY 3 bullet points total.
+
+Consider these common reconciliation challenges when analyzing:
+- **Timing Differences**: Transactions recorded at different times (e.g., in-transit deposits, outstanding checks, cutoff timing)
+- **Data Entry Errors**: Manual entry mistakes, transposed digits, incorrect amounts
+- **Format Inconsistencies**: Different file formats (SWIFT, ACH, BAI), varying transaction descriptions, standardization issues
+- **Multiple Account Complexity**: Different banking partners, multiple accounts, currency conversions
+- **Rounding & Precision**: Different decimal places, rounding methods between systems
+- **Transaction Matching Issues**: Duplicates, reversals, split transactions, batch processing differences
+- **Missing/Extra Transactions**: Unrecorded items, bank fees, interest, adjustments
+- **System Integration Problems**: Different accounting methods, software limitations, data quality issues
+- **High Volume Pressure**: Manual processing errors due to tight deadlines and large transaction volumes
+
+Format your response as EXACTLY 3 bullet points:
+• [Most likely root cause and what to check]
+• [Second most likely cause and recommended action]
+• [Additional consideration or verification step]
+
+Keep each bullet point to 1-2 sentences maximum. Be specific and actionable.`,
+        },
+        {
+          role: 'user',
+          content: `Here are the discrepancies found:\n\n${discrepanciesText}\n\nHere is the original data from all documents:\n\n${tablesText}\n\nPlease analyze these discrepancies and suggest potential root causes.`,
+        },
+      ],
+    })
+
+    const analysis = completion.choices?.[0]?.message?.content
+    if (!analysis) {
+      throw new Error('AI returned no content for root cause analysis')
+    }
+
+    console.log('  Root cause analysis generated')
+    res.json({ analysis })
+  } catch (err) {
+    console.error('Root cause analysis error:', err)
+    res.status(500).json({ error: `Failed to analyze root causes: ${err.message}` })
   }
 })
 

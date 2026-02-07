@@ -6,7 +6,37 @@
 
 /* Header */
 .app-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: #6b7280;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: #3b82f6;
+}
+
+.tab.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
 }
 
 .app-header h1 {
@@ -235,11 +265,42 @@
   border: 1px solid #e5e7eb;
 }
 
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
 .results-section h2 {
   font-size: 1.1rem;
   font-weight: 600;
-  margin-bottom: 1rem;
+  margin: 0;
   color: #1a1a2e;
+}
+
+.analyze-btn {
+  padding: 0.5rem 1rem;
+  background: #8b5cf6;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.analyze-btn:hover:not(:disabled) {
+  background: #7c3aed;
+}
+
+.analyze-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .no-results {
@@ -313,6 +374,45 @@
   font-weight: 600;
 }
 
+/* Root Cause Analysis */
+.root-cause-analysis {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+  border-radius: 8px;
+}
+
+.root-cause-analysis h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #6b21a8;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.root-cause-analysis h3:before {
+  content: '💡';
+  font-size: 1.2rem;
+}
+
+.analysis-content {
+  color: #374151;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.analysis-content p {
+  margin-bottom: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.analysis-content p:last-child {
+  margin-bottom: 0;
+}
+
 /* Error */
 .error-banner {
   background-color: #fef2f2;
@@ -324,6 +424,134 @@
   font-size: 0.9rem;
 }
 
+/* Database Mode */
+.database-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.database-upload-section h3,
+.database-list-section h3,
+.compare-section h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 1rem;
+}
+
+.database-upload-section,
+.database-list-section,
+.compare-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.compare-section {
+  margin-bottom: 1.5rem;
+}
+
+.no-database-docs {
+  text-align: center;
+  padding: 2rem;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.database-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.database-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  transition: background-color 0.15s;
+}
+
+.database-item:hover {
+  background: #f3f4f6;
+}
+
+.database-item-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  overflow: hidden;
+}
+
+.database-item-details {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.database-item-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #1a1a2e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.database-item-meta {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.folder-upload-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.folder-upload-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.folder-upload-btn {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: #f3f4f6;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.folder-upload-btn:hover:not(:has(input:disabled)) {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.folder-upload-btn:has(input:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.folder-upload-btn span {
+  display: block;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .upload-grid {
@@ -332,5 +560,9 @@
 
   .results-table {
     font-size: 0.8rem;
+  }
+
+  .database-layout {
+    grid-template-columns: 1fr;
   }
 }
