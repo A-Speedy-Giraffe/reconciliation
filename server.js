@@ -131,17 +131,17 @@ async function findDiscrepancies(tables) {
         role: 'system',
         content: `You are given structured numerical data extracted from multiple financial documents. Each document's data is a JSON array of rows with "row", "label", and "value" fields.
 
-Compare the data across ALL documents. Find every case where:
-- The same line item / label exists in multiple documents but has a DIFFERENT value
-- A line item exists in one document but is MISSING from another
-- Values that should match (same label/row) have any numerical difference at all
+Compare the data across ALL documents. Find ONLY cases where:
+- The same line item / label exists in MULTIPLE documents AND has a DIFFERENT value
+- IGNORE line items that exist in one document but are missing from others (e.g., opening balance on bank statement but not in bookkeeping)
+- ONLY report discrepancies where matching labels/fields have different numerical values
 
 For each discrepancy, return a JSON object with:
 - "row": the row number(s) involved
 - "field": the label/field name
 - "documents": which documents differ (e.g., "Doc 1 vs Doc 2")
 - "values": the conflicting values separated by " / "
-- "difference": a short description of the difference
+- "difference": a short description of the numerical difference
 - "severity": "high" for monetary/quantity differences, "medium" for date differences, "low" for reference number differences
 
 Return ONLY a valid JSON array. No markdown, no code fences, no explanation.
