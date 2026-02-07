@@ -121,6 +121,7 @@ function App() {
   const [files, setFiles] = useState([null, null])
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const setFileAt = (index, file) => {
     setFiles(prev => {
@@ -142,18 +143,44 @@ function App() {
 
   const uploadedCount = files.filter(Boolean).length
 
+  const readFileAsText = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsText(file)
+    })
+  }
+
   const handleReconcile = async () => {
     if (uploadedCount < 2) return
     setLoading(true)
-    // TODO: Replace with actual reconciliation logic / API call
-    setTimeout(() => {
-      setResults([
-        { row: 3, field: 'Amount', documents: 'Doc 1 vs Doc 2', values: '$1,200.00 / $1,250.00', difference: '$50.00', severity: 'high' },
-        { row: 7, field: 'Date', documents: 'Doc 1 vs Doc 3', values: '2025-01-15 / 2025-01-16', difference: '1 day', severity: 'low' },
-        { row: 12, field: 'Reference', documents: 'Doc 2 vs Doc 3', values: 'INV-0042 / INV-042', difference: 'Format mismatch', severity: 'low' },
-      ])
+    setError(null)
+    try {
+      const uploadedFiles = files.filter(Boolean)
+      const documents = await Promise.all(
+        uploadedFiles.map(async (file) => ({
+          name: file.name,
+          content: await readFileAsText(file),
+        }))
+      )
+      const res = await fetch('/api/reconcile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documents }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || `Server error (${res.status})`)
+      }
+      const data = await res.json()
+      setResults(data.discrepancies)
+    } catch (err) {
+      setError(err.message)
+      setResults(null)
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
   }
 
   const canReconcile = uploadedCount >= 2 && !loading
@@ -195,6 +222,12 @@ function App() {
             {loading ? 'Analyzing...' : 'Compare Documents'}
           </button>
         </div>
+
+        {error && (
+          <div className="error-banner">
+            <p>{error}</p>
+          </div>
+        )}
 
         <ResultsTable results={results} documents={files} />
       </main>

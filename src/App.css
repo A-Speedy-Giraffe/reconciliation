@@ -288,6 +288,17 @@
   font-weight: 600;
 }
 
+/* Error */
+.error-banner {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  color: #991b1b;
+  font-size: 0.9rem;
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .upload-grid {
